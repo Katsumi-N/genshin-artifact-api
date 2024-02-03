@@ -1,0 +1,26 @@
+services:
+  api:
+    build:
+      context: ./api
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      - DB_SOURCE=mysql://user:password@tcp(db:3306)/dbname?parseTime=true
+    volumes:
+      - ./api:/app
+  db:
+    image: mysql:8.0
+    ports:
+      - "13306:3306"
+    environment:
+      MYSQL_DATABASE: dbname
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: password
+    # command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - mysql:/var/lib/mysql
+volumes:
+  mysql:
