@@ -14,7 +14,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64=v3 go build -o ./app -tags timetzdata -trimpath -ldflags="-s -w" .
 
 # 実行ステージ
-FROM golang:1.21-bookworm
+FROM golang:1.22-bookworm
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # ビルダーステージからair実行可能ファイルをコピー
