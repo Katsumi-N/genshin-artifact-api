@@ -36,5 +36,6 @@ func main() {
 		return c.String(http.StatusOK, "Hello, World! with air")
 	})
 	e.GET("/characters", fetchCharacters)
+	e.GET("/characters/:id", fetchCharacter)
 	e.Logger.Fatal(e.Start(":8080"))
 }

@@ -40,3 +40,28 @@ func fetchCharacters(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, characters)
 }
+
+func fetchCharacter(c echo.Context) error {
+	ctx := c.Request().Context()
+	tx, err := db.BeginTxx(ctx, nil)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
+	}
+	defer tx.Rollback()
+
+	enkaId := c.Param("id")
+
+	var characters []Character
+	if err := tx.SelectContext(ctx, &characters, "SELECT * FROM characters WHERE enka_id = ?", enkaId); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return echo.NewHTTPError(http.StatusNotFound, "characters not found")
+		} else {
+			return echo.NewHTTPError(http.StatusInternalServerError, "failed to select: "+err.Error())
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
+	}
+
+	return c.JSON(http.StatusOK, characters)
+}
