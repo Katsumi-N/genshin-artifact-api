@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"net/http"
@@ -18,50 +19,42 @@ type Character struct {
 	CreatedAt time.Time `json:"-" db:"created_at"`
 }
 
+func fetchCharacter(c echo.Context) error {
+	enkaId := c.Param("id")
+	ctx := c.Request().Context()
+	character, err := getCharacter(enkaId, ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return echo.NewHTTPError(http.StatusNotFound, "character not found")
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to fetch character: "+err.Error())
+	}
+	return c.JSON(http.StatusOK, character)
+}
+
 func fetchCharacters(c echo.Context) error {
 	ctx := c.Request().Context()
-	tx, err := db.BeginTxx(ctx, nil)
+	characters, err := getCharacters(ctx)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to fetch characters: "+err.Error())
 	}
-	defer tx.Rollback()
-
-	var characters []Character
-	if err := tx.SelectContext(ctx, &characters, "SELECT * FROM characters"); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return echo.NewHTTPError(http.StatusNotFound, "characters not found")
-		} else {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to select: "+err.Error())
-		}
-	}
-	if err := tx.Commit(); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
-	}
-
 	return c.JSON(http.StatusOK, characters)
 }
 
-func fetchCharacter(c echo.Context) error {
-	ctx := c.Request().Context()
-	tx, err := db.BeginTxx(ctx, nil)
+func getCharacter(enkaId string, ctx context.Context) (*Character, error) {
+	var character Character
+	err := db.GetContext(ctx, &character, "SELECT * FROM characters WHERE enka_id = ?", enkaId)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
+		return nil, err
 	}
-	defer tx.Rollback()
+	return &character, nil
+}
 
-	enkaId := c.Param("id")
-
+func getCharacters(ctx context.Context) ([]Character, error) {
 	var characters []Character
-	if err := tx.SelectContext(ctx, &characters, "SELECT * FROM characters WHERE enka_id = ?", enkaId); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return echo.NewHTTPError(http.StatusNotFound, "characters not found")
-		} else {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to select: "+err.Error())
-		}
+	err := db.SelectContext(ctx, &characters, "SELECT * FROM characters")
+	if err != nil {
+		return nil, err
 	}
-	if err := tx.Commit(); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
-	}
-
-	return c.JSON(http.StatusOK, characters)
+	return characters, nil
 }
