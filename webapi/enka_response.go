@@ -19,41 +19,7 @@ type EnkaUserInfo struct {
 		} `json:"profilePicture"`
 	} `json:"playerInfo"`
 	AvatarInfoList []struct {
-		AvatarID int `json:"avatarId"`
-		PropMap  struct {
-			Num1001 struct {
-				Type int    `json:"type"`
-				Ival string `json:"ival"`
-			} `json:"1001"`
-			Num1002 struct {
-				Type int    `json:"type"`
-				Ival string `json:"ival"`
-				Val  string `json:"val"`
-			} `json:"1002"`
-			Num1003 struct {
-				Type int    `json:"type"`
-				Ival string `json:"ival"`
-			} `json:"1003"`
-			Num1004 struct {
-				Type int    `json:"type"`
-				Ival string `json:"ival"`
-			} `json:"1004"`
-			Num4001 struct {
-				Type int    `json:"type"`
-				Ival string `json:"ival"`
-				Val  string `json:"val"`
-			} `json:"4001"`
-			Num10010 struct {
-				Type int    `json:"type"`
-				Ival string `json:"ival"`
-				Val  string `json:"val"`
-			} `json:"10010"`
-			Num10049 struct {
-				Type int    `json:"type"`
-				Ival string `json:"ival"`
-				Val  string `json:"val"`
-			} `json:"10049"`
-		} `json:"propMap"`
+		AvatarID     int `json:"avatarId"`
 		FightPropMap struct {
 			Num1    float64 `json:"1"`
 			Num2    float64 `json:"2"`
@@ -173,4 +139,65 @@ type EnkaUserInfo struct {
 	} `json:"avatarInfoList"`
 	TTL int    `json:"ttl"`
 	UID string `json:"uid"`
+}
+
+type ArtifactStatType int
+
+const (
+	Attack ArtifactStatType = iota
+	AttackPercent
+	ChargeEfficiency
+	Health
+	HealthPercent
+	Defence
+	DefencePercent
+	CriticalRate
+	CriticalDamage
+	ElementalMastery
+)
+
+type ArtifactStatus struct {
+	Type  ArtifactStatType
+	Value float64
+}
+
+// TODO: 適切な名前に変更
+type ArtifactPiece struct {
+	Main ArtifactStatus
+	Sub  []ArtifactStatus
+}
+
+type CharacterStatus struct {
+	EnkaID  int
+	Level   int
+	Flower  ArtifactPiece
+	Plume   ArtifactPiece
+	Sands   ArtifactPiece
+	Goblet  ArtifactPiece
+	Circlet ArtifactPiece
+}
+
+func (e *EnkaUserInfo) ExtractCharacterStatus() []CharacterStatus {
+	// AvatorInfoListが公開キャラクター
+	avatorInfoList := e.AvatarInfoList
+
+	// avatorInfoListからCharacterStatusを抽出
+	characterStatusList := make([]CharacterStatus, 0, len(avatorInfoList))
+	for i, avatorInfo := range avatorInfoList {
+		enka_id := avatorInfo.AvatarID
+		level := avatorInfo.FightPropMap.Num1
+
+		characterStatusList[i] = CharacterStatus{
+
+			EnkaID:  enka_id,
+			Level:   level,
+			Flower:  ArtifactPiece{},
+			Plume:   ArtifactPiece{},
+			Sands:   ArtifactPiece{},
+			Goblet:  ArtifactPiece{},
+			Circlet: ArtifactPiece{},
+		}
+	}
+
+	return characterStatusList
 }

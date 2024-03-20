@@ -37,6 +37,5 @@ func main() {
 	})
 	e.GET("/characters", fetchCharacters)
 	e.GET("/characters/:id", fetchCharacter)
-	e.GET("/enka", fetchUserInfo)
 	e.Logger.Fatal(e.Start(":8080"))
 }
