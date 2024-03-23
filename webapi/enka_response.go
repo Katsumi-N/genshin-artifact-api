@@ -1,5 +1,10 @@
 package main
 
+import (
+	"fmt"
+	"strconv"
+)
+
 type EnkaUserInfo struct {
 	PlayerInfo struct {
 		Nickname             string `json:"nickname"`
@@ -19,7 +24,12 @@ type EnkaUserInfo struct {
 		} `json:"profilePicture"`
 	} `json:"playerInfo"`
 	AvatarInfoList []struct {
-		AvatarID     int `json:"avatarId"`
+		AvatarID int `json:"avatarId"`
+		PropMap  struct {
+			Level struct {
+				Val string `json:"val"`
+			} `json:"4001"`
+		} `json:"propMap"`
 		FightPropMap struct {
 			Num1    float64 `json:"1"`
 			Num2    float64 `json:"2"`
@@ -91,30 +101,10 @@ type EnkaUserInfo struct {
 					StatValue    float64 `json:"statValue"`
 				} `json:"reliquarySubstats"`
 				ReliquaryMainstat struct {
-					MainPropID string `json:"mainPropId"`
-					StatValue  int    `json:"statValue"`
+					MainPropID string  `json:"mainPropId"`
+					StatValue  float64 `json:"statValue"`
 				} `json:"reliquaryMainstat"`
 			} `json:"flat,omitempty"`
-			Reliquary0 struct {
-				Level            int   `json:"level"`
-				MainPropID       int   `json:"mainPropId"`
-				AppendPropIDList []int `json:"appendPropIdList"`
-			} `json:"reliquary,omitempty"`
-			Reliquary1 struct {
-				Level            int   `json:"level"`
-				MainPropID       int   `json:"mainPropId"`
-				AppendPropIDList []int `json:"appendPropIdList"`
-			} `json:"reliquary,omitempty"`
-			Reliquary2 struct {
-				Level            int   `json:"level"`
-				MainPropID       int   `json:"mainPropId"`
-				AppendPropIDList []int `json:"appendPropIdList"`
-			} `json:"reliquary,omitempty"`
-			Reliquary3 struct {
-				Level            int   `json:"level"`
-				MainPropID       int   `json:"mainPropId"`
-				AppendPropIDList []int `json:"appendPropIdList"`
-			} `json:"reliquary,omitempty"`
 			Weapon struct {
 				Level        int `json:"level"`
 				PromoteLevel int `json:"promoteLevel"`
@@ -156,6 +146,19 @@ const (
 	ElementalMastery
 )
 
+var ArtifactStatTypeMap = map[string]ArtifactStatType{
+	"FIGHT_PROP_HP":                Health,
+	"FIGHT_PROP_HP_PERCENT":        HealthPercent,
+	"FIGHT_PROP_ATTACK":            Attack,
+	"FIGHT_PROP_ATTACK_PERCENT":    AttackPercent,
+	"FIGHT_PROP_DEFENSE":           Defence,
+	"FIGHT_PROP_DEFENSE_PERCENT":   DefencePercent,
+	"FIGHT_PROP_CRITICAL":          CriticalRate,
+	"FIGHT_PROP_CRITICAL_HURT":     CriticalDamage,
+	"FIGHT_PROP_ELEMENT_MASTERY":   ElementalMastery,
+	"FIGHT_PROP_CHARGE_EFFICIENCY": ChargeEfficiency,
+}
+
 type ArtifactStatus struct {
 	Type  ArtifactStatType
 	Value float64
@@ -182,22 +185,91 @@ func (e *EnkaUserInfo) ExtractCharacterStatus() []CharacterStatus {
 	avatorInfoList := e.AvatarInfoList
 
 	// avatorInfoListからCharacterStatusを抽出
-	characterStatusList := make([]CharacterStatus, 0, len(avatorInfoList))
+	characterStatusList := make([]CharacterStatus, len(avatorInfoList))
 	for i, avatorInfo := range avatorInfoList {
 		enka_id := avatorInfo.AvatarID
-		level := avatorInfo.FightPropMap.Num1
+		level, _ := strconv.Atoi(avatorInfo.PropMap.Level.Val)
 
 		characterStatusList[i] = CharacterStatus{
+			EnkaID: enka_id,
+			Level:  level,
+		}
 
-			EnkaID:  enka_id,
-			Level:   level,
-			Flower:  ArtifactPiece{},
-			Plume:   ArtifactPiece{},
-			Sands:   ArtifactPiece{},
-			Goblet:  ArtifactPiece{},
-			Circlet: ArtifactPiece{},
+		artfacts := avatorInfo.EquipList
+		for _, artifact := range artfacts {
+			if artifact.Flat.ItemType != "ITEM_RELIQUARY" {
+				continue
+			}
+
+			switch artifact.Flat.EquipType {
+			case "EQUIP_BRACER":
+				characterStatusList[i].Flower = ArtifactPiece{
+					Main: ArtifactStatus{
+						Type:  ArtifactStatTypeMap[artifact.Flat.ReliquaryMainstat.MainPropID],
+						Value: artifact.Flat.ReliquaryMainstat.StatValue,
+					},
+				}
+				for _, substat := range artifact.Flat.ReliquarySubstats {
+					characterStatusList[i].Flower.Sub = append(characterStatusList[i].Flower.Sub, ArtifactStatus{
+						Type:  ArtifactStatTypeMap[substat.AppendPropID],
+						Value: substat.StatValue,
+					})
+				}
+			case "EQUIP_NECKLACE":
+				characterStatusList[i].Plume = ArtifactPiece{
+					Main: ArtifactStatus{
+						Type:  ArtifactStatTypeMap[artifact.Flat.ReliquaryMainstat.MainPropID],
+						Value: artifact.Flat.ReliquaryMainstat.StatValue,
+					},
+				}
+				for _, substat := range artifact.Flat.ReliquarySubstats {
+					characterStatusList[i].Plume.Sub = append(characterStatusList[i].Plume.Sub, ArtifactStatus{
+						Type:  ArtifactStatTypeMap[substat.AppendPropID],
+						Value: substat.StatValue,
+					})
+				}
+			case "EQUIP_SHOES":
+				characterStatusList[i].Sands = ArtifactPiece{
+					Main: ArtifactStatus{
+						Type:  ArtifactStatTypeMap[artifact.Flat.ReliquaryMainstat.MainPropID],
+						Value: artifact.Flat.ReliquaryMainstat.StatValue,
+					},
+				}
+				for _, substat := range artifact.Flat.ReliquarySubstats {
+					characterStatusList[i].Sands.Sub = append(characterStatusList[i].Sands.Sub, ArtifactStatus{
+						Type:  ArtifactStatTypeMap[substat.AppendPropID],
+						Value: substat.StatValue,
+					})
+				}
+			case "EQUIP_RING":
+				characterStatusList[i].Goblet = ArtifactPiece{
+					Main: ArtifactStatus{
+						Type:  ArtifactStatTypeMap[artifact.Flat.ReliquaryMainstat.MainPropID],
+						Value: artifact.Flat.ReliquaryMainstat.StatValue,
+					},
+				}
+				for _, substat := range artifact.Flat.ReliquarySubstats {
+					characterStatusList[i].Goblet.Sub = append(characterStatusList[i].Goblet.Sub, ArtifactStatus{
+						Type:  ArtifactStatTypeMap[substat.AppendPropID],
+						Value: substat.StatValue,
+					})
+				}
+			case "EQUIP_DRESS":
+				characterStatusList[i].Circlet = ArtifactPiece{
+					Main: ArtifactStatus{
+						Type:  ArtifactStatTypeMap[artifact.Flat.ReliquaryMainstat.MainPropID],
+						Value: artifact.Flat.ReliquaryMainstat.StatValue,
+					},
+				}
+				for _, substat := range artifact.Flat.ReliquarySubstats {
+					characterStatusList[i].Circlet.Sub = append(characterStatusList[i].Circlet.Sub, ArtifactStatus{
+						Type:  ArtifactStatTypeMap[substat.AppendPropID],
+						Value: substat.StatValue,
+					})
+				}
+			}
 		}
 	}
-
+	fmt.Printf("%#v\n", characterStatusList)
 	return characterStatusList
 }

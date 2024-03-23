@@ -35,7 +35,8 @@ func main() {
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, World! with air")
 	})
-	e.GET("/characters", fetchCharacters)
-	e.GET("/characters/:id", fetchCharacter)
+	e.GET("/characters", fetchCharactersHandler)
+	e.GET("/characters/:id", fetchCharacterHandler)
+	e.GET("/genshin/:genshin_uuid/characters", fetchOwnedCharactersListHandler)
 	e.Logger.Fatal(e.Start(":8080"))
 }
