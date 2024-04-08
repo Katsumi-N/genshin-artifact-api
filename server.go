@@ -1,29 +1,33 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/Katsumi-N/genshin-artifact-api/infrastructure/handler"
 	"github.com/Katsumi-N/genshin-artifact-api/infrastructure/repository"
 	"github.com/Katsumi-N/genshin-artifact-api/usecase"
-	"github.com/Katsumi-N/genshin-artifact-api/util"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 )
 
 func main() {
-	err := util.InitDB()
+	dbSource := os.Getenv("DB_SOURCE")
+	db, err := sqlx.Connect("mysql", dbSource)
 	if err != nil {
+		fmt.Println("DB connection failed: ", err)
 		return
 	}
-	defer util.Db.Close()
+	defer db.Close()
 
 	e := echo.New()
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, World! with air")
 	})
 
-	repository := repository.NewCharacterRepository(util.Db)
+	repository := repository.NewCharacterRepository(db)
 	service := usecase.NewCharacterService(repository)
 	characterHandler := handler.NewCharacterHandler(service)
 

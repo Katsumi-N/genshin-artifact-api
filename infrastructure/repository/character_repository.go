@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/Katsumi-N/genshin-artifact-api/domain"
-	"github.com/Katsumi-N/genshin-artifact-api/util"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -18,7 +17,7 @@ func NewCharacterRepository(db *sqlx.DB) CharacterRepository {
 
 func (r *characterRepository) GetCharacter(ctx context.Context, enkaId string) (*domain.Character, error) {
 	var character domain.Character
-	err := util.Db.GetContext(ctx, &character, "SELECT * FROM characters WHERE enka_id = ?", enkaId)
+	err := r.db.GetContext(ctx, &character, "SELECT * FROM characters WHERE enka_id = ?", enkaId)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +26,7 @@ func (r *characterRepository) GetCharacter(ctx context.Context, enkaId string) (
 
 func (r *characterRepository) GetCharacters(ctx context.Context) ([]domain.Character, error) {
 	var characters []domain.Character
-	err := util.Db.SelectContext(ctx, &characters, "SELECT * FROM characters")
+	err := r.db.SelectContext(ctx, &characters, "SELECT * FROM characters")
 	if err != nil {
 		return nil, err
 	}
