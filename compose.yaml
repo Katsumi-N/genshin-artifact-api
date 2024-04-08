@@ -1,7 +1,7 @@
 services:
   api:
     build:
-      context: ./webapi
+      context: .
     ports:
       - "8080:8080"
     depends_on:
@@ -9,7 +9,7 @@ services:
     environment:
       - DB_SOURCE=paimon:paimon@tcp(db:3306)/genshindb?parseTime=true
     volumes:
-      - ./webapi:/app
+      - .:/app
   db:
     image: mysql:8.0
     ports:
@@ -22,7 +22,7 @@ services:
       TZ: Asia/Tokyo
     volumes:
       - mysql:/var/lib/mysql
-      - ./webapi/sql:/docker-entrypoint-initdb.d
-      - ./webapi/sql/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./sql:/docker-entrypoint-initdb.d
+      - ./sql/my.cnf:/etc/mysql/conf.d/my.cnf
 volumes:
   mysql:
